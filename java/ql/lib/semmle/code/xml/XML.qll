@@ -8,7 +8,7 @@ private class TXMLLocatable =
   @xmldtd or @xmlelement or @xmlattribute or @xmlnamespace or @xmlcomment or @xmlcharacters;
 
 /** An XML element that has a location. */
-class XMLLocatable extends @xmllocatable, TXMLLocatable {
+class XMLLocatable extends @xmllocatable, TXMLLocatable, Top {
   /** Gets the source location for this element. */
   Location getLocation() { xmllocations(this, result) }
 
@@ -36,7 +36,9 @@ class XMLLocatable extends @xmllocatable, TXMLLocatable {
   }
 
   /** Gets a textual representation of this element. */
-  string toString() { none() } // overridden in subclasses
+  override string toString() { none() } // overridden in subclasses
+
+  override string getAPrimaryQlClass() { result = "XMLLocatable" }
 }
 
 /**
