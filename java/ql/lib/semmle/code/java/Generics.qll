@@ -279,7 +279,7 @@ class Wildcard extends BoundedType, @wildcard {
  * A bound with position 0 is an interface type or class type (possibly `Object`) and
  * a bound with a non-zero position is an interface type.
  */
-class TypeBound extends @typebound {
+class TypeBound extends @typebound, Top {
   /**
    * Gets the type variable that is bounded by this type bound.
    *
@@ -310,7 +310,9 @@ class TypeBound extends @typebound {
   int getPosition() { typeBounds(this, _, result, _) }
 
   /** Gets a textual representation of this type bound. */
-  string toString() { result = this.getType().getName() }
+  override string toString() { result = this.getType().getName() }
+
+  override string getAPrimaryQlClass() { result = "TypeBound" }
 }
 
 // -------- Parameterizations of generic types  --------
