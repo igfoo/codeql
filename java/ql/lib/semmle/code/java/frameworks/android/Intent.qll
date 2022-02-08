@@ -84,7 +84,7 @@ class IntentGetParcelableExtraMethod extends Method {
 
 /** The class `android.os.BaseBundle`, or a class that extends it. */
 class AndroidBundle extends Class {
-  AndroidBundle() { this.getASupertype*().hasQualifiedName("android.os", "BaseBundle") }
+  AndroidBundle() { this.getAnAncestor().hasQualifiedName("android.os", "BaseBundle") }
 }
 
 /**
