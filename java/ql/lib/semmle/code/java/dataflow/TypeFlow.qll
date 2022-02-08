@@ -285,7 +285,7 @@ private predicate downcastSuccessorAux(
  */
 private predicate downcastSuccessor(VarAccess va, RefType t) {
   exists(CastExpr cast, BaseSsaVariable v, RefType t1, RefType t2 |
-    downcastSuccessorAux(cast, v, t, t1, t2) and
+    downcastSuccessorAux(pragma[only_bind_into](cast), v, t, t1, t2) and
     t1.getASourceSupertype+() = t2 and
     va = v.getAUse() and
     dominates(cast, va) and
