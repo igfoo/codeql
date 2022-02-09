@@ -20,7 +20,7 @@ import java
 predicate methodNames(RefType t, Method m, string lowercase, string name) {
   exists(RefType t2 |
     m.getDeclaringType() = t2 and
-    hasSubtype*(t2, t)
+    hasAncestor(t2, t)
   ) and
   name = m.getName() and
   lowercase = name.toLowerCase() and

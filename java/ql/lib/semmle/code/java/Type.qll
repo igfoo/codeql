@@ -37,6 +37,14 @@ predicate hasSubtype(RefType t, Type sub) {
   typeVarSubtypeBound(t, sub) and t != sub
 }
 
+/**
+ * Holds if reference type `anc` is a direct or indirect supertype of `sub`, including itself.
+ */
+cached
+predicate hasAncestor(RefType anc, Type sub) {
+  hasSubtype*(anc, sub)
+}
+
 private predicate typeVarSubtypeBound(RefType t, TypeVariable tv) {
   if tv.hasTypeBound() then t = tv.getATypeBound().getType() else t instanceof TypeObject
 }

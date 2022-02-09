@@ -142,7 +142,7 @@ class DeserializedClass extends ReflectivelyConstructedClass {
     exists(CastExpr cast, ReadObjectMethod readObject |
       cast.getExpr().(MethodAccess).getMethod() = readObject
     |
-      hasSubtype*(cast.getType(), this)
+      hasAncestor(cast.getType(), this)
     )
   }
 }
