@@ -43,7 +43,7 @@ predicate hasSubtype(RefType t, Type sub) {
 predicate hasAncestor(RefType anc, Type sub) {
   anc = sub
   or
-  exists(RefType mid | hasAncestor(anc, mid) and hasSubtype(mid, sub))
+  exists(RefType mid | hasSubtype(anc, mid) and hasAncestor(mid, sub))
 }
 
 private predicate typeVarSubtypeBound(RefType t, TypeVariable tv) {
