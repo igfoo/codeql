@@ -40,9 +40,10 @@ predicate hasSubtype(RefType t, Type sub) {
 /**
  * Holds if reference type `anc` is a direct or indirect supertype of `sub`, including itself.
  */
-cached
 predicate hasAncestor(RefType anc, Type sub) {
-  hasSubtype*(anc, sub)
+  anc = sub
+  or
+  exists(RefType mid | hasAncestor(anc, mid) and hasSubtype(mid, sub))
 }
 
 private predicate typeVarSubtypeBound(RefType t, TypeVariable tv) {
@@ -401,6 +402,13 @@ class RefType extends Type, Annotatable, Modifiable, @reftype {
 
   /** Gets a direct subtype of this type. */
   RefType getASubtype() { hasSubtype(this, result) }
+
+  /** Gets a direct or indirect descendant of this type, including itself. */
+  RefType getADescendant() {
+    result = this
+    or
+    result = this.getADescendant().getASubtype()
+  }
 
   /** Gets a direct supertype of this type. */
   RefType getASupertype() { hasSubtype(result, this) }

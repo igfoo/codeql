@@ -80,7 +80,7 @@ predicate overlappingExceptions(RefType e1, RefType e2) {
   exists(RefType throwable | throwable.hasQualifiedName("java.lang", "Throwable") |
     throwable.hasSubtype*(e1) and
     throwable.hasSubtype*(e2) and
-    e1.getASubtype*() = e2.getASubtype*()
+    e1.getADescendant() = e2.getADescendant()
   )
 }
 

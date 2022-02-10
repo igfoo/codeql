@@ -23,7 +23,7 @@ predicate canThrow(Callable callable, RefType exception) {
     exception.getASupertype*().hasQualifiedName("java.lang", uncheckedException)
   )
   or
-  callable.getAnException().getType().getASubtype*() = exception
+  callable.getAnException().getType().getADescendant() = exception
 }
 
 from ThrowsTag throwsTag, RefType thrownType, Callable docMethod
