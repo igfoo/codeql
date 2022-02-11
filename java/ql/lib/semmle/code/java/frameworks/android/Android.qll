@@ -10,7 +10,11 @@ import semmle.code.xml.AndroidManifest
  * Gets a transitive superType avoiding magic optimisation
  */
 pragma[nomagic]
-private RefType getASuperTypePlus(RefType t) { result = t.getASupertype+() }
+private RefType getASuperTypePlus(RefType t) {
+  result = t.getASupertype()
+  or
+  result = getASuperTypePlus(t.getASupertype())
+}
 
 /**
  * Gets a reflexive/transitive superType avoiding magic optimisation
