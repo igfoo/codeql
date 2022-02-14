@@ -40,6 +40,7 @@ predicate hasSubtype(RefType t, Type sub) {
 /**
  * Holds if reference type `anc` is a direct or indirect supertype of `sub`, including itself.
  */
+cached
 predicate hasAncestor(RefType anc, Type sub) {
   anc = sub
   or
