@@ -405,11 +405,7 @@ class RefType extends Type, Annotatable, Modifiable, @reftype {
   RefType getASubtype() { hasSubtype(this, result) }
 
   /** Gets a direct or indirect descendant of this type, including itself. */
-  RefType getADescendant() {
-    result = this
-    or
-    result = this.getADescendant().getASubtype()
-  }
+  RefType getADescendant() { hasAncestor(this, result) }
 
   /** Gets a direct supertype of this type. */
   RefType getASupertype() { hasSubtype(result, this) }

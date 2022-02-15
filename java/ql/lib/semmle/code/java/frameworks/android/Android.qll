@@ -7,20 +7,10 @@ import semmle.code.java.dataflow.ExternalFlow
 import semmle.code.xml.AndroidManifest
 
 /**
- * Gets a transitive superType avoiding magic optimisation
- */
-pragma[nomagic]
-cached private RefType getASuperTypePlus(RefType t) {
-  result = t.getASupertype()
-  or
-  result = getASuperTypePlus(t.getASupertype())
-}
-
-/**
- * Gets a reflexive/transitive superType avoiding magic optimisation
+ * Gets a reflexive/transitive superType
  */
 pragma[inline]
-private RefType getASuperTypeStar(RefType t) { result = getASuperTypePlus(t) or result = t }
+private RefType getASuperTypeStar(RefType t) { hasAncestor(result, t) }
 
 /**
  * An Android component. That is, either an activity, a service,
