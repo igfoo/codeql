@@ -218,7 +218,7 @@ class TypeParcelable extends Interface {
 class CreateFromParcelMethod extends Method {
   CreateFromParcelMethod() {
     this.hasName("createFromParcel") and
-    this.getEnclosingCallable().getDeclaringType().getASupertype*() instanceof TypeParcelable
+    this.getEnclosingCallable().getDeclaringType().getAnAncestor() instanceof TypeParcelable
   }
 }
 

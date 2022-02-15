@@ -70,8 +70,8 @@ private RefType caughtType(TryStmt try, int index) {
 }
 
 private predicate maybeUnchecked(RefType t) {
-  t.getASupertype*().hasQualifiedName("java.lang", "RuntimeException") or
-  t.getASupertype*().hasQualifiedName("java.lang", "Error") or
+  t.getAnAncestor().hasQualifiedName("java.lang", "RuntimeException") or
+  t.getAnAncestor().hasQualifiedName("java.lang", "Error") or
   t.hasQualifiedName("java.lang", "Exception") or
   t.hasQualifiedName("java.lang", "Throwable")
 }

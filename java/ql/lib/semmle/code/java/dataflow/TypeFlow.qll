@@ -360,7 +360,7 @@ private predicate typeFlowJoin(int r, TypeFlowNode n, RefType t) {
   ) and
   forall(TypeFlowNode mid | joinStepRank(r, mid, n) |
     exists(RefType midtyp | exactType(mid, midtyp) or typeFlow(mid, midtyp) |
-      midtyp.getASupertype*() = t
+      midtyp.getAnAncestor() = t
     )
   )
 }
@@ -411,11 +411,11 @@ private predicate irrelevantBound(TypeFlowNode n, RefType t) {
     t = bound.getASupertype+() and
     typeBound(t) and
     typeFlow(n, t) and
-    not t.getASupertype*() = bound
+    not t.getAnAncestor() = bound
     or
     n.getType() = bound and
     typeFlow(n, t) and
-    t = bound.getASupertype*()
+    t = bound.getAnAncestor()
   )
 }
 

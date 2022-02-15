@@ -29,7 +29,7 @@ predicate serializableOrExternalizable(Interface interface) {
 predicate collectionOrMapType(RefType t) { t instanceof CollectionType or t instanceof MapType }
 
 predicate serializableType(RefType t) {
-  exists(RefType sup | sup = t.getASupertype*() | serializableOrExternalizable(sup))
+  exists(RefType sup | sup = t.getAnAncestor() | serializableOrExternalizable(sup))
   or
   // Collection interfaces are not serializable, but their implementations are
   // likely to be.

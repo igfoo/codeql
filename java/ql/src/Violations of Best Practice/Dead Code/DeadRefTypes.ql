@@ -43,7 +43,7 @@ predicate dead(RefType dead) {
   // Exclude type variables.
   not dead instanceof BoundedType and
   // Exclude JUnit tests.
-  not dead.getASupertype*().hasName("TestCase") and
+  not dead.getAnAncestor().hasName("TestCase") and
   // Exclude enum types.
   not dead instanceof EnumType and
   // Exclude anonymous classes
