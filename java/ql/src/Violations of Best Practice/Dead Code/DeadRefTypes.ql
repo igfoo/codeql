@@ -19,9 +19,7 @@ import semmle.code.java.Reflection
  */
 pragma[nomagic]
 cached private RefType getASuperTypePlus(RefType t) {
-  result = t.getASupertype()
-  or
-  result = getASuperTypePlus(t.getASupertype())
+  hasAncestor(result, t) and result != t
 }
 
 /**
