@@ -408,7 +408,7 @@ pragma[nomagic]
 private predicate irrelevantBound(TypeFlowNode n, RefType t) {
   exists(RefType bound |
     typeFlow(n, bound) and
-    t = bound.getASupertype+() and
+    t = bound.getAStrictAncestor() and
     typeBound(t) and
     typeFlow(n, t) and
     not t.getAnAncestor() = bound

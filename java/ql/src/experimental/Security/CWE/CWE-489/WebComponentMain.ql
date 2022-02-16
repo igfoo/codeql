@@ -41,13 +41,13 @@ class WebComponentMainMethod extends Method {
           .getAnAncestor()
           .hasQualifiedName("org.apache.struts.action", "Action") or // Struts actions
       this.getDeclaringType()
-          .getASupertype+()
+          .getAStrictAncestor()
           .hasQualifiedName("com.opensymphony.xwork2", "ActionSupport") or // Struts 2 actions
       this.getDeclaringType()
-          .getASupertype+()
+          .getAStrictAncestor()
           .hasQualifiedName("org.springframework.web.struts", "ActionSupport") or // Spring/Struts 2 actions
       this.getDeclaringType()
-          .getASupertype+()
+          .getAStrictAncestor()
           .hasQualifiedName("org.springframework.webflow.execution", "Action") // Spring actions
     ) and
     this instanceof MainMethod and

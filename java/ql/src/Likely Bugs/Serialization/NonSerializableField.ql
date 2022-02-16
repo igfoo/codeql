@@ -77,7 +77,7 @@ predicate exceptions(Class c, Field f) {
     f.isStatic()
     or
     // Classes that implement `Externalizable` completely take over control during serialization.
-    externalizable(c.getASupertype+())
+    externalizable(c.getAStrictAncestor())
     or
     // Stateless session beans are not normally serialized during their usual life-cycle
     // but are forced by their expected supertype to be serializable.
@@ -92,7 +92,7 @@ predicate exceptions(Class c, Field f) {
 from Class c, Field f, string reason
 where
   c.fromSource() and
-  c.getASupertype+() instanceof TypeSerializable and
+  c.getAStrictAncestor() instanceof TypeSerializable and
   f.getDeclaringType() = c and
   not exceptions(c, f) and
   reason = nonSerialReason(f.getType())

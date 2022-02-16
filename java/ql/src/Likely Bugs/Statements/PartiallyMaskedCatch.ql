@@ -87,7 +87,7 @@ predicate overlappingExceptions(RefType e1, RefType e2) {
 from TryStmt try, int first, int second, RefType masking, RefType masked, string multiCatchMsg
 where
   masking = caughtType(try, first) and
-  masking.getASupertype+() = masked and
+  masking.getAStrictAncestor() = masked and
   masked = caughtType(try, second) and
   forall(RefType thrownType |
     thrownType = getAThrownExceptionType(try) and
