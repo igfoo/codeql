@@ -360,7 +360,7 @@ private predicate typeFlowJoin(int r, TypeFlowNode n, RefType t) {
   ) and
   forall(TypeFlowNode mid | joinStepRank(r, mid, n) |
     exists(RefType midtyp | exactType(mid, midtyp) or typeFlow(mid, midtyp) |
-      midtyp.getAnAncestor() = t
+      pragma[only_bind_out](midtyp).getAnAncestor() = t
     )
   )
 }
