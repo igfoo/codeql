@@ -100,7 +100,7 @@ class KotlinExtractorExtension(
         val trapDir = File(System.getenv("CODEQL_EXTRACTOR_JAVA_TRAP_DIR").takeUnless { it.isNullOrEmpty() } ?: "kotlin-extractor/trap")
         val compression_env_var = "CODEQL_EXTRACTOR_JAVA_OPTION_TRAP_COMPRESSION"
         val compression_option = System.getenv(compression_env_var)
-        val defaultCompression = Compression.GZIP
+        val defaultCompression = Compression.NONE
         val (compression, compressionWarning) =
             if (compression_option == null) {
                 Pair(defaultCompression, null)
