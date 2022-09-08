@@ -474,12 +474,13 @@ open class KotlinFileExtractor(
             tw.writeCompiler_generated(proxyFunctionId, CompilerGeneratedKinds.JVMSTATIC_PROXY_METHOD.kind)
             if (extractFunctionBodies) {
                 val realFunctionLocId = tw.getLocation(f)
-                extractExpressionBody(ExpressionContext(proxyFunctionId), realFunctionLocId).also { returnId ->
+                val expressionContext = ExpressionContext(proxyFunctionId)
+                extractExpressionBody(expressionContext, realFunctionLocId).also { returnId ->
                     extractRawMethodAccess(
                         f,
                         realFunctionLocId,
                         f.returnType,
-                        ExpressionContext(proxyFunctionId),
+                        expressionContext,
                         returnId,
                         0,
                         returnId,
@@ -487,14 +488,14 @@ open class KotlinFileExtractor(
                         { argParent, idxOffset ->
                             f.valueParameters.forEachIndexed { idx, param ->
                                 val syntheticParamId = useValueParameter(param, proxyFunctionId)
-                                extractVariableAccess(syntheticParamId, param.type, realFunctionLocId, argParent, idxOffset + idx, ExpressionContext(proxyFunctionId), returnId)
+                                extractVariableAccess(syntheticParamId, param.type, realFunctionLocId, argParent, idxOffset + idx, expressionContext, returnId)
                             }
                         },
                         companionType,
                         { callId ->
                             val companionField = useCompanionObjectClassInstance(companionObject)?.id
-                            extractVariableAccess(companionField, companionType, realFunctionLocId, callId, -1, ExpressionContext(proxyFunctionId), returnId).also { varAccessId ->
-                                extractTypeAccessRecursive(cType, realFunctionLocId, varAccessId, -1, ExpressionContext(proxyFunctionId), returnId)
+                            extractVariableAccess(companionField, companionType, realFunctionLocId, callId, -1, expressionContext, returnId).also { varAccessId ->
+                                extractTypeAccessRecursive(cType, realFunctionLocId, varAccessId, -1, expressionContext, returnId)
                             }
                         },
                         null
@@ -772,11 +773,13 @@ open class KotlinFileExtractor(
 
             tw.writeVariableBinding(lhsId, vId)
 
+            val expressionContext = ExpressionContext(blockAndFunctionId.second)
+
             if (static) {
-                extractStaticTypeAccessQualifier(f, lhsId, declLocId, ExpressionContext(blockAndFunctionId.second), stmtId)
+                extractStaticTypeAccessQualifier(f, lhsId, declLocId, expressionContext, stmtId)
             }
 
-            extractExpressionExpr(expr, ExpressionContext(blockAndFunctionId.second), assignmentId, 1, stmtId)
+            extractExpressionExpr(expr, expressionContext, assignmentId, 1, stmtId)
         }
 
         for (decl in declarations) {
@@ -3562,18 +3565,20 @@ open class KotlinFileExtractor(
             // Call to target function:
             val callType = useType(returnType)
 
+            val expressionContext = ExpressionContext(labels.methodId)
+
             val callId: Label<out DbExpr> = if (target is IrConstructorSymbol) {
                 val callId = tw.getFreshIdLabel<DbNewexpr>()
                 tw.writeExprs_newexpr(callId, callType.javaResult.id, retId, 0)
                 tw.writeExprsKotlinType(callId, callType.kotlinResult.id)
 
-                extractConstructorTypeAccess(returnType, callType, target, locId, callId, -3, ExpressionContext(labels.methodId), retId)
+                extractConstructorTypeAccess(returnType, callType, target, locId, callId, -3, expressionContext, retId)
                 callId
             } else {
                 val callId = tw.getFreshIdLabel<DbMethodaccess>()
                 tw.writeExprs_methodaccess(callId, callType.javaResult.id, retId, 0)
                 tw.writeExprsKotlinType(callId, callType.kotlinResult.id)
-                extractTypeArguments(expressionTypeArgs, locId, callId, ExpressionContext(labels.methodId), retId, -2, true)
+                extractTypeArguments(expressionTypeArgs, locId, callId, expressionContext, retId, -2, true)
                 callId
             }
 
@@ -3584,27 +3589,27 @@ open class KotlinFileExtractor(
 
             val useFirstArgAsDispatch: Boolean
             if (dispatchReceiverInfo != null) {
-                writeFieldAccessInFunctionBody(dispatchReceiverInfo.type, dispatchReceiverIdx, dispatchReceiverInfo.field, callId, ExpressionContext(labels.methodId), retId)
+                writeFieldAccessInFunctionBody(dispatchReceiverInfo.type, dispatchReceiverIdx, dispatchReceiverInfo.field, callId, expressionContext, retId)
 
                 useFirstArgAsDispatch = false
             } else {
                 if (target.owner.isLocalFunction()) {
                     val ids = getLocallyVisibleFunctionLabels(target.owner)
-                    extractNewExprForLocalFunction(ids, callId, locId, ExpressionContext(labels.methodId), retId)
+                    extractNewExprForLocalFunction(ids, callId, locId, expressionContext, retId)
                     useFirstArgAsDispatch = false
                 }
                 else {
                     useFirstArgAsDispatch = target.owner.dispatchReceiverParameter != null
 
                     if (isStaticFunction(target.owner)) {
-                        extractStaticTypeAccessQualifier(target.owner, callId, locId, ExpressionContext(labels.methodId), retId)
+                        extractStaticTypeAccessQualifier(target.owner, callId, locId, expressionContext, retId)
                     }
                 }
             }
 
             val extensionIdxOffset: Int
             if (extensionReceiverInfo != null) {
-                writeFieldAccessInFunctionBody(extensionReceiverInfo.type, 0, extensionReceiverInfo.field, callId, ExpressionContext(labels.methodId), retId)
+                writeFieldAccessInFunctionBody(extensionReceiverInfo.type, 0, extensionReceiverInfo.field, callId, expressionContext, retId)
                 extensionIdxOffset = 1
             } else {
                 extensionIdxOffset = 0
@@ -3624,7 +3629,7 @@ open class KotlinFileExtractor(
                     } else {
                         pIdx + extensionIdxOffset - dispatchIdxOffset
                     }
-                    writeVariableAccessInFunctionBody(p.second, childIdx, p.first, callId, ExpressionContext(labels.methodId), retId)
+                    writeVariableAccessInFunctionBody(p.second, childIdx, p.first, callId, expressionContext, retId)
                 }
             }
         }
@@ -3672,9 +3677,10 @@ open class KotlinFileExtractor(
 
             tw.writeCallableBinding(callId, getId)
 
-            this.writeThisAccess(callId, ExpressionContext(invokeLabels.methodId), retId)
+            val expressionContext = ExpressionContext(invokeLabels.methodId)
+            this.writeThisAccess(callId, expressionContext, retId)
             for ((pIdx, p) in invokeLabels.parameters.withIndex()) {
-                this.writeVariableAccessInFunctionBody(p.second, pIdx, p.first, callId, ExpressionContext(invokeLabels.methodId), retId)
+                this.writeVariableAccessInFunctionBody(p.second, pIdx, p.first, callId, expressionContext, retId)
             }
         }
     }
