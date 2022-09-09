@@ -469,7 +469,7 @@ open class KotlinFileExtractor(
             val proxyFunctionId = tw.getLabelFor<DbMethod>(getFunctionLabel(f, classId, listOf()))
             // We extract the function prototype with its ID overridden to belong to `c` not the companion object,
             // but suppress outputting the body, which we will replace with a delegating call below.
-            forceExtractFunction(f, classId, extractBody = false, extractMethodAndParameterTypeAccesses = extractFunctionBodies, typeSubstitution = null, classTypeArgsIncludingOuterClasses = listOf(), idOverride = proxyFunctionId, locOverride = null, extractOrigin = false)
+            forceExtractFunction(f, classId, extractMethodAndParameterTypeAccesses = extractFunctionBodies, typeSubstitution = null, classTypeArgsIncludingOuterClasses = listOf(), idOverride = proxyFunctionId, locOverride = null, extractOrigin = false)
             addModifiers(proxyFunctionId, "static")
             tw.writeCompiler_generated(proxyFunctionId, CompilerGeneratedKinds.JVMSTATIC_PROXY_METHOD.kind)
             if (extractFunctionBodies) {
@@ -807,13 +807,28 @@ open class KotlinFileExtractor(
         }
     }
 
-    private fun extractFunction(f: IrFunction, parentId: Label<out DbReftype>, extractBody: Boolean, extractMethodAndParameterTypeAccesses: Boolean, typeSubstitution: TypeSubstitution?, classTypeArgsIncludingOuterClasses: List<IrTypeArgument>?) =
-        if (isFake(f))
-            null
-        else
-            forceExtractFunction(f, parentId, extractBody, extractMethodAndParameterTypeAccesses, typeSubstitution, classTypeArgsIncludingOuterClasses, null, null)
+    private fun extractFunction(f: IrFunction, parentId: Label<out DbReftype>, extractBody: Boolean, extractMethodAndParameterTypeAccesses: Boolean, typeSubstitution: TypeSubstitution?, classTypeArgsIncludingOuterClasses: List<IrTypeArgument>?): Label<out DbCallable>? {
+        if (isFake(f)) {
+            return null
+        } else {
+            val id = forceExtractFunction(f, parentId, extractMethodAndParameterTypeAccesses, typeSubstitution, classTypeArgsIncludingOuterClasses, null, null)
+            if (extractBody) {
+                with("function body", f) {
+                    DeclarationStackAdjuster(f).use {
+                        val body = f.body
+                        if (body != null) {
+                            if (typeSubstitution != null)
+                                logger.errorElement("Type substitution should only be used to extract a function prototype, not the body", f)
+                            extractBody(body, ExpressionContext(id))
+                        }
+                    }
+                }
+            }
+            return id
+        }
+    }
 
-    private fun forceExtractFunction(f: IrFunction, parentId: Label<out DbReftype>, extractBody: Boolean, extractMethodAndParameterTypeAccesses: Boolean, typeSubstitution: TypeSubstitution?, classTypeArgsIncludingOuterClasses: List<IrTypeArgument>?, idOverride: Label<DbMethod>?, locOverride: Label<DbLocation>?, extractOrigin: Boolean = true): Label<out DbCallable>  {
+    private fun forceExtractFunction(f: IrFunction, parentId: Label<out DbReftype>, extractMethodAndParameterTypeAccesses: Boolean, typeSubstitution: TypeSubstitution?, classTypeArgsIncludingOuterClasses: List<IrTypeArgument>?, idOverride: Label<DbMethod>?, locOverride: Label<DbLocation>?, extractOrigin: Boolean = true): Label<out DbCallable>  {
         with("function", f) {
             DeclarationStackAdjuster(f).use {
 
@@ -895,12 +910,6 @@ open class KotlinFileExtractor(
                 }
 
                 tw.writeHasLocation(id, locId)
-                val body = f.body
-                if (body != null && extractBody) {
-                    if (typeSubstitution != null)
-                        logger.errorElement("Type substitution should only be used to extract a function prototype, not the body", f)
-                    extractBody(body, ExpressionContext(id))
-                }
 
                 extractVisibility(f, id, f.visibility)
 
@@ -4584,7 +4593,7 @@ open class KotlinFileExtractor(
                     // we would need to compose generic type substitutions -- for example, if we're implementing
                     // T UnaryOperator<T>.apply(T t) here, we would need to compose substitutions so we can implement
                     // the real underlying R Function<T, R>.apply(T t).
-                    forceExtractFunction(samMember, classId, extractBody = false, extractMethodAndParameterTypeAccesses = true, typeSub, classTypeArgs, ids.function, tw.getLocation(e))
+                    forceExtractFunction(samMember, classId, extractMethodAndParameterTypeAccesses = true, typeSub, classTypeArgs, ids.function, tw.getLocation(e))
 
                     //body
                     val blockId = tw.getFreshIdLabel<DbBlock>()
