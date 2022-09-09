@@ -815,10 +815,11 @@ open class KotlinFileExtractor(
             if (extractBody) {
                 with("function body", f) {
                     DeclarationStackAdjuster(f).use {
+                        if (typeSubstitution != null) {
+                            logger.errorElement("Type substitution should only be used to extract a function prototype, not the body", f)
+                        }
                         val body = f.body
                         if (body != null) {
-                            if (typeSubstitution != null)
-                                logger.errorElement("Type substitution should only be used to extract a function prototype, not the body", f)
                             extractBody(body, ExpressionContext(id))
                         }
                     }
