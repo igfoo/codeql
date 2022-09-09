@@ -2677,20 +2677,17 @@ open class KotlinFileExtractor(
                 is IrDelegatingConstructorCall -> {
                     val stmtParent = parent.stmt(e, expressionContext)
 
-                    val irCallable = declarationStack.peek()
-
                     val delegatingClass = e.symbol.owner.parent
-                    val currentClass = irCallable.parent
 
                     if (delegatingClass !is IrClass) {
                         logger.warnElement("Delegating class isn't a class: " + delegatingClass.javaClass, e)
                     }
-                    if (currentClass !is IrClass) {
-                        logger.warnElement("Current class isn't a class: " + currentClass.javaClass, e)
+                    if (expressionContext.enclosingClassOrFile is ClassOrFile.File) {
+                        logger.warnElement("Current class is a file ${expressionContext.enclosingClassOrFile.f}", e)
                     }
 
                     val id: Label<out DbStmt>
-                    if (delegatingClass != currentClass) {
+                    if (delegatingClass is IrClass && delegatingClass != (expressionContext.enclosingClassOrFile as? ClassOrFile.Class)?.c) {
                         id = tw.getFreshIdLabel<DbSuperconstructorinvocationstmt>()
                         tw.writeStmts_superconstructorinvocationstmt(id, stmtParent.parent, stmtParent.idx, expressionContext.enclosingCallableId)
                     } else {
