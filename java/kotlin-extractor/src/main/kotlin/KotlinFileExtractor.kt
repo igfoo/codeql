@@ -310,7 +310,7 @@ open class KotlinFileExtractor(
                 }
             }.firstOrNull { it != null } ?: false)
 
-            extractEnclosingClass(c.parent, id, c, locId, if (useBoundOuterType) argsIncludingOuterClasses?.drop(c.typeParameters.size) else listOf())
+            extractEnclosingClass(DeclarationOrEnclosingClassOrFile.Declaration(c), id, c, locId, if (useBoundOuterType) argsIncludingOuterClasses?.drop(c.typeParameters.size) else listOf())
 
             return id
         }
@@ -419,7 +419,7 @@ open class KotlinFileExtractor(
                 val locId = tw.getLocation(c)
                 tw.writeHasLocation(id, locId)
 
-                extractEnclosingClass(c.parent, id, c, locId, listOf())
+                extractEnclosingClass(DeclarationOrEnclosingClassOrFile.Declaration(c), id, c, locId, listOf())
 
                 val javaClass = (c.source as? JavaSourceElement)?.javaElement as? JavaClass
 
@@ -534,16 +534,19 @@ open class KotlinFileExtractor(
      * Note that the nested class can also be a local class declared inside a function, so the upwards traversal is skipping the non-class parents. Also, in some cases the file class is the enclosing one, which has no IR representation.
      */
     private fun extractEnclosingClass(
-        declarationParent: IrDeclarationParent,             // The declaration parent of the element for which we are extracting the enclosing class
+        what: DeclarationOrEnclosingClassOrFile,            // What we are extracting the enclosing class of
         innerId: Label<out DbClassorinterface>,             // ID of the inner class
         innerClass: IrClass?,                               // The inner class, if available. It's not available if the enclosing class of a generated class is being extracted
         innerLocId: Label<DbLocation>,                      // Location of the inner class
         parentClassTypeArguments: List<IrTypeArgument>?     // Type arguments of the parent class. If `parentClassTypeArguments` is null, the parent class is a raw type
     ) {
-        with("enclosing class", declarationParent) {
-            var parent: IrDeclarationParent? = declarationParent
-            while (parent != null) {
-                if (parent is IrClass) {
+        with("enclosing class", what.toElement()) {
+            val parent = what.getEnclosingClassOrFile()
+            when (parent) {
+                null -> {
+                    logger.error("Enclosing class or file not found")
+                }
+                is IrClass -> {
                     val parentId =
                         if (parent.isAnonymousObject) {
                             useAnonymousClass(parent).javaResult.id.cast<DbClass>()
@@ -565,22 +568,17 @@ open class KotlinFileExtractor(
                             tw.writeType_companion_object(parentId, instance.id, innerId.cast<DbClass>())
                         }
                     }
-
-                    break
-                } else if (parent is IrFile) {
-                    if (innerClass != null) {
-                        // We don't have to extract file class containers for classes
-                        break
-                    }
-                    if (this.filePath != parent.path) {
-                        logger.error("Unexpected file parent found")
-                    }
-                    val fileId = extractFileClass(parent)
-                    tw.writeEnclInReftype(innerId, fileId)
-                    break
                 }
-
-                parent = (parent as? IrDeclaration)?.parent
+                is IrFile -> {
+                    // We don't have to extract file class containers for classes
+                    if (innerClass == null) {
+                        if (this.filePath != parent.path) {
+                            logger.error("Unexpected file parent found")
+                        }
+                        val fileId = extractFileClass(parent)
+                        tw.writeEnclInReftype(innerId, fileId)
+                    }
+                }
             }
         }
     }
@@ -3772,7 +3770,7 @@ open class KotlinFileExtractor(
             val baseClass = pluginContext.referenceClass(FqName("kotlin.jvm.internal.${prefix}PropertyReference${kPropertyType.arguments.size - 1}"))?.owner?.typeWith()
                 ?: pluginContext.irBuiltIns.anyType
 
-            val classId = extractGeneratedClass(ids, listOf(baseClass, kPropertyType), locId, propertyReferenceExpr, declarationParent)
+            val classId = extractGeneratedClass(ids, listOf(baseClass, kPropertyType), locId, propertyReferenceExpr, DeclarationOrEnclosingClassOrFile.EnclosingClassOrFile(expressionContext.enclosingClassOrFile))
 
             val helper = PropertyReferenceHelper(propertyReferenceExpr, locId, ids)
 
@@ -3983,7 +3981,7 @@ open class KotlinFileExtractor(
                 val baseClass = pluginContext.referenceClass(FqName("kotlin.jvm.internal.FunctionReference"))?.owner?.typeWith()
                     ?: pluginContext.irBuiltIns.anyType
 
-                val classId = extractGeneratedClass(ids, listOf(baseClass, fnInterfaceType), locId, functionReferenceExpr, declarationParent)
+                val classId = extractGeneratedClass(ids, listOf(baseClass, fnInterfaceType), locId, functionReferenceExpr, DeclarationOrEnclosingClassOrFile.EnclosingClassOrFile(expressionContext.enclosingClassOrFile))
 
                 helper.extractReceiverField()
 
@@ -4591,7 +4589,7 @@ open class KotlinFileExtractor(
                     val helper = GeneratedClassHelper(locId, ids)
 
                     val declarationParent = declarationStack.peekAsDeclarationParent(e) ?: return
-                    val classId = extractGeneratedClass(ids, listOf(pluginContext.irBuiltIns.anyType, e.typeOperand), locId, e, declarationParent)
+                    val classId = extractGeneratedClass(ids, listOf(pluginContext.irBuiltIns.anyType, e.typeOperand), locId, e, DeclarationOrEnclosingClassOrFile.EnclosingClassOrFile(expressionContext.enclosingClassOrFile))
 
                     // add field
                     val fieldId = tw.getFreshIdLabel<DbField>()
@@ -4734,7 +4732,7 @@ open class KotlinFileExtractor(
         superTypes: List<IrType>,
         locId: Label<DbLocation>,
         elementToReportOn: IrElement,
-        declarationParent: IrDeclarationParent
+        declarationOrEnclosingClassOrFile: DeclarationOrEnclosingClassOrFile
     ): Label<out DbClass> {
         // Write class
         val id = ids.type.javaResult.id.cast<DbClass>()
@@ -4777,7 +4775,7 @@ open class KotlinFileExtractor(
         addVisibilityModifierToLocalOrAnonymousClass(id)
         extractClassSupertypes(superTypes, listOf(), id, inReceiverContext = true)
 
-        extractEnclosingClass(declarationParent, id, null, locId, listOf())
+        extractEnclosingClass(declarationOrEnclosingClassOrFile, id, null, locId, listOf())
 
         return id
     }
@@ -4789,7 +4787,7 @@ open class KotlinFileExtractor(
         with("generated class", localFunction) {
             val ids = getLocallyVisibleFunctionLabels(localFunction)
 
-            val id = extractGeneratedClass(ids, superTypes, tw.getLocation(localFunction), localFunction, localFunction.parent)
+            val id = extractGeneratedClass(ids, superTypes, tw.getLocation(localFunction), localFunction, DeclarationOrEnclosingClassOrFile.Declaration(localFunction))
 
             // Extract local function as a member
             extractFunction(localFunction, enclosingClassOrFile, id, extractBody = true, extractMethodAndParameterTypeAccesses = true, null, listOf())
@@ -4856,6 +4854,34 @@ sealed class ClassOrFile {
         return when (this) {
             is Class -> this.c
             is File -> this.f
+        }
+    }
+}
+
+sealed class DeclarationOrEnclosingClassOrFile {
+    class Declaration(val d: IrDeclaration) : DeclarationOrEnclosingClassOrFile()
+    class EnclosingClassOrFile(val x: ClassOrFile) : DeclarationOrEnclosingClassOrFile()
+
+    fun toElement(): IrElement {
+        return when (this) {
+            is Declaration -> this.d
+            is EnclosingClassOrFile -> this.x.toIrDeclarationContainer()
+        }
+    }
+
+    fun getEnclosingClassOrFile(): ClassOrFile? {
+        return when (this) {
+            is Declaration -> getEnclosingClassOrFile(this.d.parent)
+            is EnclosingClassOrFile -> this.x
+        }
+    }
+
+    private fun getEnclosingClassOrFile(dp: IrDeclarationParent?): ClassOrFile? {
+        return when (dp) {
+            null -> null
+            is IrClass -> ClassOrFile.Class(dp)
+            is IrFile -> ClassOrFile.File(dp)
+            else -> getEnclosingClassOrFile((dp as? IrDeclaration)?.parent)
         }
     }
 }
