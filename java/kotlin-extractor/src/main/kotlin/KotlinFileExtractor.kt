@@ -80,6 +80,8 @@ open class KotlinFileExtractor(
     globalExtensionState: KotlinExtractorGlobalState,
 ): KotlinUsesExtractor(logger, tw, dependencyCollector, externalClassExtractor, primitiveTypeMapping, pluginContext, globalExtensionState) {
 
+    val usesK2 = pluginContext.languageVersionSettings.languageVersion.usesK2
+
     val metaAnnotationSupport = MetaAnnotationSupport(logger, pluginContext, this)
 
     private inline fun <T> with(kind: String, element: IrElement, f: () -> T): T {
@@ -166,22 +168,26 @@ open class KotlinFileExtractor(
             else -> false
         }
 
+    private fun FunctionDescriptor.tryIsHiddenToOvercomeSignatureClash(d: IrFunction): Boolean {
+        try {
+            return this.isHiddenToOvercomeSignatureClash
+        }
+        catch (e: NotImplementedError) {
+            // TODO: We need a replacement for this for Kotlin 2
+            if (!usesK2) {
+                // `org.jetbrains.kotlin.ir.descriptors.IrBasedClassConstructorDescriptor.isHiddenToOvercomeSignatureClash` throws the exception
+                logger.warnElement("Couldn't query if element is fake; assuming it's not.", d, e)
+            }
+            return false
+        }
+    }
+
     @OptIn(ObsoleteDescriptorBasedAPI::class)
     private fun isFake(d: IrDeclarationWithVisibility): Boolean {
         val hasFakeVisibility = d.visibility.let { it is DelegatedDescriptorVisibility && it.delegate == Visibilities.InvisibleFake } || d.isFakeOverride
         if (hasFakeVisibility && !isJavaBinaryObjectMethodRedeclaration(d))
             return true
-        try {
-            if ((d as? IrFunction)?.descriptor?.isHiddenToOvercomeSignatureClash == true) {
-                return true
-            }
-        }
-        catch (e: NotImplementedError) {
-            // `org.jetbrains.kotlin.ir.descriptors.IrBasedClassConstructorDescriptor.isHiddenToOvercomeSignatureClash` throws the exception
-            logger.warnElement("Couldn't query if element is fake, deciding it's not.", d, e)
-            return false
-        }
-        return false
+        return ((d as? IrFunction)?.descriptor?.tryIsHiddenToOvercomeSignatureClash(d) == true)
     }
 
     private fun shouldExtractDecl(declaration: IrDeclaration, extractPrivateMembers: Boolean) =
