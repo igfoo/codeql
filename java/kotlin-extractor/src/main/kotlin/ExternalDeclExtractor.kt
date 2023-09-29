@@ -1,6 +1,7 @@
 package com.github.codeql
 
 import com.github.codeql.utils.isExternalFileClassMember
+import com.github.codeql.utils.versions.usesK2
 import com.semmle.extractor.java.OdasaOutput
 import com.semmle.util.data.StringDigestor
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
