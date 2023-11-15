@@ -80,7 +80,7 @@ open class KotlinFileExtractor(
     globalExtensionState: KotlinExtractorGlobalState,
 ): KotlinUsesExtractor(logger, tw, dependencyCollector, externalClassExtractor, primitiveTypeMapping, pluginContext, globalExtensionState) {
 
-    val usesK2 = pluginContext.languageVersionSettings.languageVersion.usesK2
+    val usesK2 = usesK2(pluginContext)
 
     val metaAnnotationSupport = MetaAnnotationSupport(logger, pluginContext, this)
 
