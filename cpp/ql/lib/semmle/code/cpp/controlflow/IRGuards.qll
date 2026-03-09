@@ -11,6 +11,7 @@ private import semmle.code.cpp.ir.ValueNumbering
 private import semmle.code.cpp.ir.implementation.raw.internal.TranslatedExpr as TE
 private import semmle.code.cpp.ir.implementation.raw.internal.TranslatedFunction as TF
 private import semmle.code.cpp.ir.implementation.raw.internal.InstructionTag
+private import semmle.code.cpp.ir.dataflow.internal.DataFlowUtil
 
 private class BasicBlock = IRCfg::BasicBlock;
 
@@ -1102,7 +1103,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   pragma[inline]
   predicate comparesLt(Operand left, Operand right, int k, boolean isLessThan, boolean testIsTrue) {
     exists(GuardValue value |
-      compares_lt(valueNumber(this), left, right, k, isLessThan, value) and
+      compares_lt(this, left, right, k, isLessThan, value) and
       value.asBooleanValue() = testIsTrue
     )
   }
@@ -1113,7 +1114,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
    */
   pragma[inline]
   predicate comparesLt(Operand op, int k, boolean isLessThan, GuardValue value) {
-    unary_compares_lt(valueNumber(this), op, k, isLessThan, value)
+    unary_compares_lt(this, op, k, isLessThan, value)
   }
 
   /**
@@ -1123,7 +1124,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   pragma[inline]
   predicate ensuresLt(Operand left, Operand right, int k, IRBlock block, boolean isLessThan) {
     exists(GuardValue value |
-      compares_lt(valueNumber(this), left, right, k, isLessThan, value) and
+      compares_lt(this, left, right, k, isLessThan, value) and
       this.valueControls(block, value)
     )
   }
@@ -1135,7 +1136,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   pragma[inline]
   predicate ensuresLt(Operand op, int k, IRBlock block, boolean isLessThan) {
     exists(GuardValue value |
-      unary_compares_lt(valueNumber(this), op, k, isLessThan, value) and
+      unary_compares_lt(this, op, k, isLessThan, value) and
       this.valueControls(block, value)
     )
   }
@@ -1149,7 +1150,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
     Operand left, Operand right, int k, IRBlock pred, IRBlock succ, boolean isLessThan
   ) {
     exists(GuardValue value |
-      compares_lt(valueNumber(this), left, right, k, isLessThan, value) and
+      compares_lt(this, left, right, k, isLessThan, value) and
       this.valueControlsBranchEdge(pred, succ, value)
     )
   }
@@ -1161,7 +1162,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   pragma[inline]
   predicate ensuresLtEdge(Operand left, int k, IRBlock pred, IRBlock succ, boolean isLessThan) {
     exists(GuardValue value |
-      unary_compares_lt(valueNumber(this), left, k, isLessThan, value) and
+      unary_compares_lt(this, left, k, isLessThan, value) and
       this.valueControlsBranchEdge(pred, succ, value)
     )
   }
@@ -1170,7 +1171,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   pragma[inline]
   predicate comparesEq(Operand left, Operand right, int k, boolean areEqual, boolean testIsTrue) {
     exists(GuardValue value |
-      compares_eq(valueNumber(this), left, right, k, areEqual, value) and
+      compares_eq(this, left, right, k, areEqual, value) and
       value.asBooleanValue() = testIsTrue
     )
   }
@@ -1178,7 +1179,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   /** Holds if (determined by this guard) `op == k` evaluates to `areEqual` if this expression evaluates to `value`. */
   pragma[inline]
   predicate comparesEq(Operand op, int k, boolean areEqual, GuardValue value) {
-    unary_compares_eq(valueNumber(this), op, k, areEqual, value)
+    unary_compares_eq(this, op, k, areEqual, value)
   }
 
   /**
@@ -1188,7 +1189,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   pragma[inline]
   predicate ensuresEq(Operand left, Operand right, int k, IRBlock block, boolean areEqual) {
     exists(GuardValue value |
-      compares_eq(valueNumber(this), left, right, k, areEqual, value) and
+      compares_eq(this, left, right, k, areEqual, value) and
       this.valueControls(block, value)
     )
   }
@@ -1200,7 +1201,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   pragma[inline]
   predicate ensuresEq(Operand op, int k, IRBlock block, boolean areEqual) {
     exists(GuardValue value |
-      unary_compares_eq(valueNumber(this), op, k, areEqual, value) and
+      unary_compares_eq(this, op, k, areEqual, value) and
       this.valueControls(block, value)
     )
   }
@@ -1214,7 +1215,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
     Operand left, Operand right, int k, IRBlock pred, IRBlock succ, boolean areEqual
   ) {
     exists(GuardValue value |
-      compares_eq(valueNumber(this), left, right, k, areEqual, value) and
+      compares_eq(this, left, right, k, areEqual, value) and
       this.valueControlsBranchEdge(pred, succ, value)
     )
   }
@@ -1226,7 +1227,7 @@ final class IRGuardCondition extends Guards_v1::Guard {
   pragma[inline]
   predicate ensuresEqEdge(Operand op, int k, IRBlock pred, IRBlock succ, boolean areEqual) {
     exists(GuardValue value |
-      unary_compares_eq(valueNumber(this), op, k, areEqual, value) and
+      unary_compares_eq(this, op, k, areEqual, value) and
       this.valueControlsBranchEdge(pred, succ, value)
     )
   }
@@ -1399,7 +1400,7 @@ private module Cached {
    */
   cached
   predicate compares_eq(
-    ValueNumber test, Operand left, Operand right, int k, boolean areEqual, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean areEqual, GuardValue value
   ) {
     /* The simple case where the test *is* the comparison so areEqual = testIsTrue xor eq. */
     exists(GuardValue v | simple_comparison_eq(test, left, right, k, v) |
@@ -1418,16 +1419,16 @@ private module Cached {
     or
     /* (x is true => (left == right + k)) => (!x is false => (left == right + k)) */
     exists(GuardValue dual | value = dual.getDualValue() |
-      compares_eq(test.(LogicalNotValueNumber).getUnary(), left, right, k, areEqual, dual)
+      compares_eq(test.(LogicalNotInstruction).getUnary(), left, right, k, areEqual, dual)
     )
     or
-    compares_eq(test.(BuiltinExpectCallValueNumber).getCondition(), left, right, k, areEqual, value)
+    compares_eq(test.(BuiltinExpectCallInstruction).getCondition(), left, right, k, areEqual, value)
     or
     exists(Operand l, GuardValue bv |
       // 1. test = value -> int(l) = 0 is !bv
       unary_compares_eq(test, l, 0, bv.asBooleanValue().booleanNot(), value) and
       // 2. l = bv -> left + right is areEqual
-      compares_eq(valueNumber(BooleanInstruction<isUnaryComparesEqLeft/1>::get(l.getDef())), left,
+      compares_eq(BooleanInstruction<isUnaryComparesEqLeft/1>::get(l.getDef()), left,
         right, k, areEqual, bv)
       // We want this to hold:
       // `test = value -> left + right is areEqual`
@@ -1442,7 +1443,7 @@ private module Cached {
    */
   cached
   predicate unary_compares_eq(
-    ValueNumber test, Operand op, int k, boolean areEqual, GuardValue value
+    Instruction test, Operand op, int k, boolean areEqual, GuardValue value
   ) {
     /* The simple case where the test *is* the comparison so areEqual = testIsTrue xor eq. */
     exists(GuardValue v | unary_simple_comparison_eq(test, op, k, v) |
@@ -1456,7 +1457,7 @@ private module Cached {
     /* (x is true => (op == k)) => (!x is false => (op == k)) */
     exists(GuardValue dual |
       value = dual.getDualValue() and
-      unary_compares_eq(test.(LogicalNotValueNumber).getUnary(), op, k, areEqual, dual)
+      unary_compares_eq(test.(LogicalNotInstruction).getUnary(), op, k, areEqual, dual)
     )
     or
     // ((test is `areEqual` => op == const + k2) and const == `k1`) =>
@@ -1470,14 +1471,14 @@ private module Cached {
     // See argument for why this is correct in compares_eq
     exists(Operand l, GuardValue bv |
       unary_compares_eq(test, l, 0, bv.asBooleanValue().booleanNot(), value) and
-      unary_compares_eq(valueNumber(BooleanInstruction<isUnaryComparesEqLeft/1>::get(l.getDef())),
+      unary_compares_eq(BooleanInstruction<isUnaryComparesEqLeft/1>::get(l.getDef()),
         op, k, areEqual, bv)
     )
     or
-    unary_compares_eq(test.(BuiltinExpectCallValueNumber).getCondition(), op, k, areEqual, value)
+    unary_compares_eq(test.(BuiltinExpectCallInstruction).getCondition(), op, k, areEqual, value)
     or
     exists(Cpp::BinaryLogicalOperation logical, Cpp::Expr operand, boolean b |
-      test.getAnInstruction().getUnconvertedResultExpression() = logical and
+      test.getUnconvertedResultExpression() = logical and
       op.getDef().getUnconvertedResultExpression() = operand and
       logical.impliesValue(operand, b, value.asBooleanValue())
     |
@@ -1491,14 +1492,14 @@ private module Cached {
 
   /** Rearrange various simple comparisons into `left == right + k` form. */
   private predicate simple_comparison_eq(
-    CompareValueNumber cmp, Operand left, Operand right, int k, GuardValue value
+    CompareInstruction cmp, Operand left, Operand right, int k, GuardValue value
   ) {
-    cmp instanceof CompareEQValueNumber and
+    cmp instanceof CompareEQInstruction and
     cmp.hasOperands(left, right) and
     k = 0 and
     value.asBooleanValue() = true
     or
-    cmp instanceof CompareNEValueNumber and
+    cmp instanceof CompareNEInstruction and
     cmp.hasOperands(left, right) and
     k = 0 and
     value.asBooleanValue() = false
@@ -1537,27 +1538,27 @@ private module Cached {
   }
 
   /** Rearrange various simple comparisons into `op == k` form. */
-  private predicate unary_simple_comparison_eq(ValueNumber test, Operand op, int k, GuardValue value) {
-    exists(SwitchConditionValueNumber condition, CaseEdge edge |
-      condition = test and
-      op = condition.getExpressionOperand() and
+  private predicate unary_simple_comparison_eq(Instruction test, Operand op, int k, GuardValue value) {
+    exists(SwitchInstruction switch, CaseEdge edge |
+      switch.getExpression() = test and
+      op = switch.getExpressionOperand() and
       value.asIntValue() = k and
       edge.getValue().toInt() = k and
-      exists(condition.getSuccessor(edge))
+      exists(test.getSuccessor(edge))
     )
     or
     exists(Instruction const | int_value(const) = k |
       value.asBooleanValue() = true and
-      test.(CompareEQValueNumber).hasOperands(op, const.getAUse())
+      test.(CompareEQInstruction).hasOperands(op, const.getAUse())
       or
       value.asBooleanValue() = false and
-      test.(CompareNEValueNumber).hasOperands(op, const.getAUse())
+      test.(CompareNEInstruction).hasOperands(op, const.getAUse())
     )
     or
     exists(GuardValue bv |
       bv = value and
       mayBranchOn(op.getDef()) and
-      op = test.getAUse()
+      localInstructionFlow(test, op.getDef()) // TODO: localInstructionFlow isn't right: It'll step through phi nodes
     |
       k = 0 and
       bv.asBooleanValue() = false
@@ -1582,15 +1583,15 @@ private module Cached {
   }
 
   private predicate complex_eq(
-    ValueNumber cmp, Operand left, Operand right, int k, boolean areEqual, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean areEqual, GuardValue value
   ) {
-    sub_eq(cmp, left, right, k, areEqual, value)
+    sub_eq(test, left, right, k, areEqual, value)
     or
-    add_eq(cmp, left, right, k, areEqual, value)
+    add_eq(test, left, right, k, areEqual, value)
   }
 
   private predicate unary_complex_eq(
-    ValueNumber test, Operand op, int k, boolean areEqual, GuardValue value
+    Instruction test, Operand op, int k, boolean areEqual, GuardValue value
   ) {
     unary_sub_eq(test, op, k, areEqual, value)
     or
@@ -1605,7 +1606,7 @@ private module Cached {
   /** Holds if `left < right + k` evaluates to `isLt` given that test is `value`. */
   cached
   predicate compares_lt(
-    ValueNumber test, Operand left, Operand right, int k, boolean isLt, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean isLt, GuardValue value
   ) {
     /* In the simple case, the test is the comparison, so isLt = testIsTrue */
     simple_comparison_lt(test, left, right, k) and
@@ -1618,29 +1619,29 @@ private module Cached {
     or
     /* (x is true => (left < right + k)) => (!x is false => (left < right + k)) */
     exists(GuardValue dual | value = dual.getDualValue() |
-      compares_lt(test.(LogicalNotValueNumber).getUnary(), left, right, k, isLt, dual)
+      compares_lt(test.(LogicalNotInstruction).getUnary(), left, right, k, isLt, dual)
     )
     or
-    compares_lt(test.(BuiltinExpectCallValueNumber).getCondition(), left, right, k, isLt, value)
+    compares_lt(test.(BuiltinExpectCallInstruction).getCondition(), left, right, k, isLt, value)
     or
     // See argument for why this is correct in compares_eq
     exists(Operand l, GuardValue bv |
       unary_compares_eq(test, l, 0, bv.asBooleanValue().booleanNot(), value) and
-      compares_lt(valueNumber(BooleanInstruction<isUnaryComparesEqLeft/1>::get(l.getDef())), left,
+      compares_lt(BooleanInstruction<isUnaryComparesEqLeft/1>::get(l.getDef()), left,
         right, k, isLt, bv)
     )
   }
 
   /** Holds if `op < k` evaluates to `isLt` given that `test` evaluates to `value`. */
   cached
-  predicate unary_compares_lt(ValueNumber test, Operand op, int k, boolean isLt, GuardValue value) {
+  predicate unary_compares_lt(Instruction test, Operand op, int k, boolean isLt, GuardValue value) {
     unary_simple_comparison_lt(test, op, k, isLt, value)
     or
     complex_lt(test, op, k, isLt, value)
     or
     /* (x is true => (op < k)) => (!x is false => (op < k)) */
     exists(GuardValue dual | value = dual.getDualValue() |
-      unary_compares_lt(test.(LogicalNotValueNumber).getUnary(), op, k, isLt, dual)
+      unary_compares_lt(test.(LogicalNotInstruction).getUnary(), op, k, isLt, dual)
     )
     or
     exists(int k1, int k2, Instruction const |
@@ -1649,48 +1650,49 @@ private module Cached {
       k = k1 + k2
     )
     or
-    unary_compares_lt(test.(BuiltinExpectCallValueNumber).getCondition(), op, k, isLt, value)
+    unary_compares_lt(test.(BuiltinExpectCallInstruction).getCondition(), op, k, isLt, value)
     or
     // See argument for why this is correct in compares_eq
     exists(Operand l, GuardValue bv |
       unary_compares_eq(test, l, 0, bv.asBooleanValue().booleanNot(), value) and
-      unary_compares_lt(valueNumber(BooleanInstruction<isUnaryComparesEqLeft/1>::get(l.getDef())),
+      unary_compares_lt(BooleanInstruction<isUnaryComparesEqLeft/1>::get(l.getDef()),
         op, k, isLt, bv)
     )
   }
 
   /** `(a < b + k) => (b > a - k) => (b >= a + (1-k))` */
   private predicate compares_ge(
-    ValueNumber test, Operand left, Operand right, int k, boolean isGe, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean isGe, GuardValue value
   ) {
     exists(int onemk | k = 1 - onemk | compares_lt(test, right, left, onemk, isGe, value))
   }
 
   /** Rearrange various simple comparisons into `left < right + k` form. */
-  private predicate simple_comparison_lt(CompareValueNumber cmp, Operand left, Operand right, int k) {
+  private predicate simple_comparison_lt(CompareInstruction cmp, Operand left, Operand right, int k) {
     cmp.hasOperands(left, right) and
-    cmp instanceof CompareLTValueNumber and
+    cmp instanceof CompareLTInstruction and
     k = 0
     or
     cmp.hasOperands(left, right) and
-    cmp instanceof CompareLEValueNumber and
+    cmp instanceof CompareLEInstruction and
     k = 1
     or
     cmp.hasOperands(right, left) and
-    cmp instanceof CompareGTValueNumber and
+    cmp instanceof CompareGTInstruction and
     k = 0
     or
     cmp.hasOperands(right, left) and
-    cmp instanceof CompareGEValueNumber and
+    cmp instanceof CompareGEInstruction and
     k = 1
   }
 
   /** Rearrange various simple comparisons into `op < k` form. */
   private predicate unary_simple_comparison_lt(
-    SwitchConditionValueNumber test, Operand op, int k, boolean isLt, GuardValue value
+    Instruction test, Operand op, int k, boolean isLt, GuardValue value
   ) {
-    exists(string minValue, string maxValue |
-      test.getExpressionOperand() = op and
+    exists(string minValue, string maxValue, SwitchInstruction switch |
+      switch.getExpression() = test and
+      switch.getExpressionOperand() = op and
       exists(test.getSuccessor(EdgeKind::caseEdge(minValue, maxValue))) and
       minValue < maxValue
     |
@@ -1706,14 +1708,14 @@ private module Cached {
   }
 
   private predicate complex_lt(
-    ValueNumber cmp, Operand left, Operand right, int k, boolean isLt, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean isLt, GuardValue value
   ) {
-    sub_lt(cmp, left, right, k, isLt, value)
+    sub_lt(test, left, right, k, isLt, value)
     or
-    add_lt(cmp, left, right, k, isLt, value)
+    add_lt(test, left, right, k, isLt, value)
   }
 
-  private predicate complex_lt(ValueNumber test, Operand left, int k, boolean isLt, GuardValue value) {
+  private predicate complex_lt(Instruction test, Operand left, int k, boolean isLt, GuardValue value) {
     sub_lt(test, left, k, isLt, value)
     or
     add_lt(test, left, k, isLt, value)
@@ -1722,38 +1724,38 @@ private module Cached {
   // left - x < right + c => left < right + (c+x)
   // left < (right - x) + c => left < right + (c-x)
   private predicate sub_lt(
-    ValueNumber cmp, Operand left, Operand right, int k, boolean isLt, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean isLt, GuardValue value
   ) {
     exists(SubInstruction lhs, int c, int x |
-      compares_lt(cmp, lhs.getAUse(), right, c, isLt, value) and
+      compares_lt(test, lhs.getAUse(), right, c, isLt, value) and
       left = lhs.getLeftOperand() and
       x = int_value(lhs.getRight()) and
       k = c + x
     )
     or
     exists(SubInstruction rhs, int c, int x |
-      compares_lt(cmp, left, rhs.getAUse(), c, isLt, value) and
+      compares_lt(test, left, rhs.getAUse(), c, isLt, value) and
       right = rhs.getLeftOperand() and
       x = int_value(rhs.getRight()) and
       k = c - x
     )
     or
     exists(PointerSubInstruction lhs, int c, int x |
-      compares_lt(cmp, lhs.getAUse(), right, c, isLt, value) and
+      compares_lt(test, lhs.getAUse(), right, c, isLt, value) and
       left = lhs.getLeftOperand() and
       x = int_value(lhs.getRight()) and
       k = c + x
     )
     or
     exists(PointerSubInstruction rhs, int c, int x |
-      compares_lt(cmp, left, rhs.getAUse(), c, isLt, value) and
+      compares_lt(test, left, rhs.getAUse(), c, isLt, value) and
       right = rhs.getLeftOperand() and
       x = int_value(rhs.getRight()) and
       k = c - x
     )
   }
 
-  private predicate sub_lt(ValueNumber test, Operand left, int k, boolean isLt, GuardValue value) {
+  private predicate sub_lt(Instruction test, Operand left, int k, boolean isLt, GuardValue value) {
     exists(SubInstruction lhs, int c, int x |
       unary_compares_lt(test, lhs.getAUse(), c, isLt, value) and
       left = lhs.getLeftOperand() and
@@ -1772,10 +1774,10 @@ private module Cached {
   // left + x < right + c => left < right + (c-x)
   // left < (right + x) + c => left < right + (c+x)
   private predicate add_lt(
-    ValueNumber cmp, Operand left, Operand right, int k, boolean isLt, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean isLt, GuardValue value
   ) {
     exists(AddInstruction lhs, int c, int x |
-      compares_lt(cmp, lhs.getAUse(), right, c, isLt, value) and
+      compares_lt(test, lhs.getAUse(), right, c, isLt, value) and
       (
         left = lhs.getLeftOperand() and x = int_value(lhs.getRight())
         or
@@ -1785,7 +1787,7 @@ private module Cached {
     )
     or
     exists(AddInstruction rhs, int c, int x |
-      compares_lt(cmp, left, rhs.getAUse(), c, isLt, value) and
+      compares_lt(test, left, rhs.getAUse(), c, isLt, value) and
       (
         right = rhs.getLeftOperand() and x = int_value(rhs.getRight())
         or
@@ -1795,7 +1797,7 @@ private module Cached {
     )
     or
     exists(PointerAddInstruction lhs, int c, int x |
-      compares_lt(cmp, lhs.getAUse(), right, c, isLt, value) and
+      compares_lt(test, lhs.getAUse(), right, c, isLt, value) and
       (
         left = lhs.getLeftOperand() and x = int_value(lhs.getRight())
         or
@@ -1805,7 +1807,7 @@ private module Cached {
     )
     or
     exists(PointerAddInstruction rhs, int c, int x |
-      compares_lt(cmp, left, rhs.getAUse(), c, isLt, value) and
+      compares_lt(test, left, rhs.getAUse(), c, isLt, value) and
       (
         right = rhs.getLeftOperand() and x = int_value(rhs.getRight())
         or
@@ -1815,7 +1817,7 @@ private module Cached {
     )
   }
 
-  private predicate add_lt(ValueNumber test, Operand left, int k, boolean isLt, GuardValue value) {
+  private predicate add_lt(Instruction test, Operand left, int k, boolean isLt, GuardValue value) {
     exists(AddInstruction lhs, int c, int x |
       unary_compares_lt(test, lhs.getAUse(), c, isLt, value) and
       (
@@ -1840,31 +1842,31 @@ private module Cached {
   // left - x == right + c => left == right + (c+x)
   // left == (right - x) + c => left == right + (c-x)
   private predicate sub_eq(
-    ValueNumber cmp, Operand left, Operand right, int k, boolean areEqual, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean areEqual, GuardValue value
   ) {
     exists(SubInstruction lhs, int c, int x |
-      compares_eq(cmp, lhs.getAUse(), right, c, areEqual, value) and
+      compares_eq(test, lhs.getAUse(), right, c, areEqual, value) and
       left = lhs.getLeftOperand() and
       x = int_value(lhs.getRight()) and
       k = c + x
     )
     or
     exists(SubInstruction rhs, int c, int x |
-      compares_eq(cmp, left, rhs.getAUse(), c, areEqual, value) and
+      compares_eq(test, left, rhs.getAUse(), c, areEqual, value) and
       right = rhs.getLeftOperand() and
       x = int_value(rhs.getRight()) and
       k = c - x
     )
     or
     exists(PointerSubInstruction lhs, int c, int x |
-      compares_eq(cmp, lhs.getAUse(), right, c, areEqual, value) and
+      compares_eq(test, lhs.getAUse(), right, c, areEqual, value) and
       left = lhs.getLeftOperand() and
       x = int_value(lhs.getRight()) and
       k = c + x
     )
     or
     exists(PointerSubInstruction rhs, int c, int x |
-      compares_eq(cmp, left, rhs.getAUse(), c, areEqual, value) and
+      compares_eq(test, left, rhs.getAUse(), c, areEqual, value) and
       right = rhs.getLeftOperand() and
       x = int_value(rhs.getRight()) and
       k = c - x
@@ -1873,7 +1875,7 @@ private module Cached {
 
   // op - x == c => op == (c+x)
   private predicate unary_sub_eq(
-    ValueNumber test, Operand op, int k, boolean areEqual, GuardValue value
+    Instruction test, Operand op, int k, boolean areEqual, GuardValue value
   ) {
     exists(SubInstruction sub, int c, int x |
       unary_compares_eq(test, sub.getAUse(), c, areEqual, value) and
@@ -1893,10 +1895,10 @@ private module Cached {
   // left + x == right + c => left == right + (c-x)
   // left == (right + x) + c => left == right + (c+x)
   private predicate add_eq(
-    ValueNumber cmp, Operand left, Operand right, int k, boolean areEqual, GuardValue value
+    Instruction test, Operand left, Operand right, int k, boolean areEqual, GuardValue value
   ) {
     exists(AddInstruction lhs, int c, int x |
-      compares_eq(cmp, lhs.getAUse(), right, c, areEqual, value) and
+      compares_eq(test, lhs.getAUse(), right, c, areEqual, value) and
       (
         left = lhs.getLeftOperand() and x = int_value(lhs.getRight())
         or
@@ -1906,7 +1908,7 @@ private module Cached {
     )
     or
     exists(AddInstruction rhs, int c, int x |
-      compares_eq(cmp, left, rhs.getAUse(), c, areEqual, value) and
+      compares_eq(test, left, rhs.getAUse(), c, areEqual, value) and
       (
         right = rhs.getLeftOperand() and x = int_value(rhs.getRight())
         or
@@ -1916,7 +1918,7 @@ private module Cached {
     )
     or
     exists(PointerAddInstruction lhs, int c, int x |
-      compares_eq(cmp, lhs.getAUse(), right, c, areEqual, value) and
+      compares_eq(test, lhs.getAUse(), right, c, areEqual, value) and
       (
         left = lhs.getLeftOperand() and x = int_value(lhs.getRight())
         or
@@ -1926,7 +1928,7 @@ private module Cached {
     )
     or
     exists(PointerAddInstruction rhs, int c, int x |
-      compares_eq(cmp, left, rhs.getAUse(), c, areEqual, value) and
+      compares_eq(test, left, rhs.getAUse(), c, areEqual, value) and
       (
         right = rhs.getLeftOperand() and x = int_value(rhs.getRight())
         or
@@ -1938,7 +1940,7 @@ private module Cached {
 
   // left + x == right + c => left == right + (c-x)
   private predicate unary_add_eq(
-    ValueNumber test, Operand left, int k, boolean areEqual, GuardValue value
+    Instruction test, Operand left, int k, boolean areEqual, GuardValue value
   ) {
     exists(AddInstruction lhs, int c, int x |
       unary_compares_eq(test, lhs.getAUse(), c, areEqual, value) and
