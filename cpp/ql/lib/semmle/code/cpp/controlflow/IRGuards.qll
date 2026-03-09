@@ -7,7 +7,6 @@ import cpp as Cpp
 import semmle.code.cpp.ir.IR
 private import codeql.util.Void
 private import codeql.controlflow.Guards as SharedGuards
-private import semmle.code.cpp.ir.ValueNumbering
 private import semmle.code.cpp.ir.implementation.raw.internal.TranslatedExpr as TE
 private import semmle.code.cpp.ir.implementation.raw.internal.TranslatedFunction as TF
 private import semmle.code.cpp.ir.implementation.raw.internal.InstructionTag
@@ -1242,86 +1241,6 @@ final class IRGuardCondition extends Guards_v1::Guard {
 
 cached
 private module Cached {
-  /**
-   * A value number such that at least one of the instructions is
-   * a `CompareInstruction`.
-   */
-  private class CompareValueNumber extends ValueNumber {
-    CompareInstruction cmp;
-
-    CompareValueNumber() { cmp = this.getAnInstruction() }
-
-    /** Gets a `CompareInstruction` belonging to this value number. */
-    CompareInstruction getCompareInstruction() { result = cmp }
-
-    /**
-     * Gets the left and right operands of a `CompareInstruction` that
-     * belong to this value number.
-     */
-    predicate hasOperands(Operand left, Operand right) {
-      left = cmp.getLeftOperand() and
-      right = cmp.getRightOperand()
-    }
-  }
-
-  private class CompareEQValueNumber extends CompareValueNumber {
-    override CompareEQInstruction cmp;
-  }
-
-  private class CompareNEValueNumber extends CompareValueNumber {
-    override CompareNEInstruction cmp;
-  }
-
-  private class CompareLTValueNumber extends CompareValueNumber {
-    override CompareLTInstruction cmp;
-  }
-
-  private class CompareGTValueNumber extends CompareValueNumber {
-    override CompareGTInstruction cmp;
-  }
-
-  private class CompareLEValueNumber extends CompareValueNumber {
-    override CompareLEInstruction cmp;
-  }
-
-  private class CompareGEValueNumber extends CompareValueNumber {
-    override CompareGEInstruction cmp;
-  }
-
-  /**
-   * A value number such that at least one of the instructions provides
-   * the integer value controlling a  `SwitchInstruction`.
-   */
-  private class SwitchConditionValueNumber extends ValueNumber {
-    SwitchInstruction switch;
-
-    pragma[nomagic]
-    SwitchConditionValueNumber() { this.getAnInstruction() = switch.getExpression() }
-
-    /** Gets an expression that belongs to this value number. */
-    Operand getExpressionOperand() { result = switch.getExpressionOperand() }
-
-    Instruction getSuccessor(CaseEdge kind) { result = switch.getSuccessor(kind) }
-  }
-
-  private class BuiltinExpectCallValueNumber extends ValueNumber {
-    BuiltinExpectCallInstruction instr;
-
-    BuiltinExpectCallValueNumber() { this.getAnInstruction() = instr }
-
-    ValueNumber getCondition() { result.getAnInstruction() = instr.getCondition() }
-
-    Operand getAUse() { result = instr.getAUse() }
-  }
-
-  private class LogicalNotValueNumber extends ValueNumber {
-    LogicalNotInstruction instr;
-
-    LogicalNotValueNumber() { this.getAnInstruction() = instr }
-
-    ValueNumber getUnary() { result.getAnInstruction() = instr.getUnary() }
-  }
-
   signature predicate sinkSig(Instruction instr);
 
   private module BooleanInstruction<sinkSig/1 isSink> {
